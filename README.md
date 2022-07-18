@@ -19,7 +19,7 @@ Each exercise below has the following:
 
 1. Basic description of the problem to solve.
 1. What you need to do with the server (start it, stop it, start one more instance).
-1. The code for my solution with additional questions about it (starting with `# Q:`).
+1. The code for my solution with additional questions about it (starting with `# Q:`). Answers are decoded with [ROT13](https://en.wikipedia.org/wiki/ROT13). Use `codecs.decode('some text', 'rot13')` to decode them.
 1. Additional questions and my answers to them.
 
 ## The first implementation
@@ -78,7 +78,7 @@ Now, we have a requirement that the client that we made will be run on the serve
 
 </details>
 
-My implementation is in [test_client1.py](./test_client1.py). You can run it with `pytest test_client1.py`. Same as before, compare it with yours and answer questions.
+My implementation is in [test_client1.py](./test_client1.py). You can run it with `task test1`. Same as before, compare it with yours and answer questions.
 
 ## Testing on CI
 
@@ -100,6 +100,8 @@ Stop both servers that you had ran earlier. Do your tests fail? Why? If they fai
 
   Many engineers would just mock the `requests.get` function. The mock would check that the expected URL is passed as the first argument and would return a fake response with `200` or `500` status code, depending on what we test. However, this approach means to make too many assumptions about how `requests` works. Assumptions may be wrong, and the tests won't catch some misuse of the library.
 
-  Another approach is to mock not the whole library but only the response that it returns at the end for a specific HTTP request. For [requests](https://requests.readthedocs.io/en/latest/), you can use [responses](https://github.com/getsentry/responses), and for [aiohttp](https://docs.aiohttp.org/en/stable/), [aioresponses](https://github.com/pnuckowski/aioresponses).
+  A better approach is to mock not the whole library but only the response that it returns at the end for a specific HTTP request. For [requests](https://requests.readthedocs.io/en/latest/), you can use [responses](https://github.com/getsentry/responses), and for [aiohttp](https://docs.aiohttp.org/en/stable/), [aioresponses](https://github.com/pnuckowski/aioresponses).
 
 </details>
+
+You can find my implementation in [test_client2.py](./test_client2.py). Use `python3 -m pytest test_client2.py` to run it.

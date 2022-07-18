@@ -1,4 +1,4 @@
-module github.com/orsinium-labs/testing-workshop
+module github.com/orsinium-labs/python-testing
 
 go 1.18
 

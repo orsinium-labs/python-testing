@@ -1,5 +1,10 @@
 # https://taskfile.dev
 version: '3'
+
+env:
+  GOOD_URL: http://0.0.0.0:1945
+  BAD_URL: http://0.0.0.0:1939
+
 tasks:
   good:
     - go run ./server.go --port 1945 --code 200
@@ -9,3 +14,6 @@ tasks:
     - go run ./server.go --redirect {{.CLI_ARGS}} --code 301
   ugly:
     - go run ./server.go --port 1939 --code 500 --freeze
+
+  test1:
+    - python3.9 -m pytest test_client1.py

@@ -1,0 +1,11 @@
+# https://taskfile.dev
+version: '3'
+tasks:
+  good:
+    - go run ./server.go --port 1945 --code 200
+  bad:
+    - go run ./server.go --port 1939 --code 500
+  redirect:
+    - go run ./server.go --redirect {{.CLI_ARGS}} --code 301
+  ugly:
+    - go run ./server.go --port 1939 --code 500 --freeze

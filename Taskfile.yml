@@ -17,3 +17,6 @@ tasks:
 
   test1:
     - python3.9 -m pytest test_client1.py
+
+  test4:
+    - python3.9 -m pytest test_client4.py

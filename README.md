@@ -157,7 +157,7 @@ We already had 2 possible states for the server: "good" and "bad". Now, we also 
 
 </details>
 
-Write tests covering the new state. You can start the proxy server by running `task proxy`. It will be started on the same port as the "good" server was running.
+Write tests covering the new state. You can start the proxy server by running `task proxy`. It will be started on the same port as the "good" server was running. My implementation is available in [test_client3.py](./test_client3.py) and can be ran as `python3.9 -m pytest test_client3.py`.
 
 ## Unexpected changes
 

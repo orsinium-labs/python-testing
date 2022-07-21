@@ -11,7 +11,7 @@ tasks:
   bad:
     - go run ./server.go --port 1939 --code 500
   proxy:
-    - go run ./server.go --redirect {{.CLI_ARGS}} --code 301
+    - go run ./server.go --port 1945 --redirect {{.CLI_ARGS}} --code 301
   ugly:
     - go run ./server.go --port 1939 --code 500 --freeze
 

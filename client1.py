@@ -1,4 +1,7 @@
 # Q: what is this __future__ import?
+# A: Vg znxrf nyy glcr naabgngvbaf ynml, naq fb nyybjf hfvat Clguba 3.10
+#    glcr naabgngvbaf fglyr va byqre Clguba irefvbaf.
+#    Frr uggcf://crcf.clguba.bet/crc-0563/
 from __future__ import annotations
 from argparse import ArgumentParser
 import sys

@@ -104,4 +104,149 @@ Stop both servers that you had ran earlier. Do your tests fail? Why? If they fai
 
 </details>
 
-You can find my implementation in [test_client2.py](./test_client2.py). Use `python3 -m pytest test_client2.py` to run it.
+You can find my implementation in [test_client2.py](./test_client2.py). Use `python3 -m pytest test_client2.py`is to run it.
+
+## Proxy
+
+For this exercise, I want you to take the role of the developers of the server. There is a new requirement from the business. We need to modify the server so that it can take a role of a "proxy". Such server should be considered healthy only if another server, which it points to, is also healthy. In other words, when we check health of the server, it may answer "yeah, I'm fine, but you should also check this guy".
+
+<details>
+  <summary>How to make this change without breaking the tool we developed earlier?</summary>
+
+  A possible solution is to use a [URL redirect](https://en.wikipedia.org/wiki/URL_redirection). All we need to do that on the server side is to return a special code 301 and a header `Location` that will point to another server. In Go (which we use for the server), it can be done by calling [http.Redirect](https://pkg.go.dev/net/http#Redirect).
+
+</details>
+
+<details>
+  <summary>Will the client still work after the change? Why?</summary>
+
+  Well, it should. Thanks to a good standardization of HTTP and thank to us for using it, the HTTP library you picked (requests, httpx, aiohttp) should follow redirects by default, or at least support it as an optional flag. For instance, for requests, the flag is `follow_redirects`, and it's `True` by default.
+
+  If the library does not follow redirects by default (or you explicitly made it so), the change still shouldn't break old versions of the tool, because 3xx codes are considered a success. Only 4xx indicates a client error and 5xx indicates a server error. In that case, the client will be broken only if you explicitly checked for 200 in the return code. So, if instead of `resp.status_code == 200` you check `resp.ok`, all should be fine.
+
+</details>
+
+<details>
+  <summary>Shouldn't the client be a strict as possible?</summary>
+
+  You may have explicitly disabled redirects and allowed only 200 responses in your implementation of the client by design. And it would be a good idea in some scenarios, when you have a full control over both sides (the one that produces the status code and the one that uses it). When you have some assertions about the system, it's often a good idea to explicitly state them as early in your pipeline as possible. This approach is known as "[fail-fast](https://en.wikipedia.org/wiki/Fail-fast)".
+
+  In our case, however, we don't have full control over the server, and the client and server may evolve and be released independently. In that case, a better-suited approach is "[be liberal in what you accept from others](https://en.wikipedia.org/wiki/Robustness_principle)". In other words, do not make too many assumptions, only the necessary ones.
+
+  This dichotomy is also known as "[open-world](https://en.wikipedia.org/wiki/Open-world_assumption) and [closed-world](https://en.wikipedia.org/wiki/Closed-world_assumption) assumption". There is no single answer to what is better, it highly depends on the situation, the problem you're solving, and the trade-offs you're ready to make.
+
+</details>
+
+## Tests for proxy
+
+We already had 2 possible states for the server: "good" and "bad". Now, we also have "proxy". There are also some states we, perhaps, haven't tested for. What if we can't resolve DNS name of the server? What if it's unreachable? What if the server responded but timed out while sending the HTTP headers? There are many corner-cases we want to test if we want the client to be reliable.
+
+<details>
+  <summary>How to make it easy to add new test cases?</summary>
+
+  [Table-driven tests](https://en.wikipedia.org/wiki/Data-driven_testing)! I already did it in my [test_client2.py](./test_client2.py) by using [pytest.mark.parametrize](https://docs.pytest.org/en/6.2.x/parametrize.html), so no surprise here. But why? First of all, it's less code, and so the tests are easier to read and understand. But what's the most important is that now it's easy to add new test cases. Humans are lazy, and nobody likes writing tests. More friction you have for adding a new test case, fewer tests you will have at the end. And if adding a new test case means adding one short line `(given, expected)`, you will have a good test coverage in no time.
+
+</details>
+
+<details>
+  <summary>What about integration tests? How many do we need?</summary>
+
+  Usually, adding a new integration test means not just one more test case but much more effort. And the execution time is much slower that for unit-tests that don't make any actual network requests. In our case, for each state we want to test, we have to run a new instance of the server. And, as I said before, a real-world server may require a lot of resources and other services. As we'll see in exercises below, we often can afford only one instance of the server for integration tests. So, you won't have much of them.
+
+  The idea of having fewer integration tests than unit tests is known as "[test pyramid](https://martinfowler.com/articles/practical-test-pyramid.html)". The idea of pyramid and naming are controversial, and people all the time try to come up with a better structure. Still, the core idea usually stays the same: you have tests of different granularity and complexity, and the focus should be on keeping tests simple, fast, and reproducible.
+
+</details>
+
+Write tests covering the new state. You can start the proxy server by running `task proxy`. It will be started on the same port as the "good" server was running.
+
+## Unexpected changes
+
+Let's say, the server team wasn't so mindful about our tool. They made a breaking change. For instance, now the server requires `User-Agent: healthcheck` to be present in all requests. What's even worse, the change wasn't clearly communicated, and the new version of the server was released without letting us know.
+
+<details>
+  <summary>Will our tests detect the issue?</summary>
+
+  Well, yes and no. Yes because integration tests will indeed detect the issue. No because we don't run integration tests on CI, and there is no guarantee that anyone will runn the tests locally with the new version of the server before we release it on the prod.
+
+</details>
+
+<details>
+  <summary>Who's to blame for the issue?</summary>
+
+  [No blame culture](https://www.davidsonmorris.com/no-blame-culture/) means that, well, we don't blame anyone ever for any issues. The goal is to avoid people being silent about issues they introduce, out of fear being blamed for it, or other negative effects impacting them. And also if you start blaming people around, you'll get a sticky idea "I'm working with idiots", which is harmful for your mental state.
+
+  You should, however, always ask yourself what went wrong and how to prevent a similar issue happening again. In this case, we have a combination of at least 3 factors:
+
+  1. The change was breaking, and we should avoid breaking changes.
+  1. The change wasn't clearly communicated.
+  1. We don't run integration tests. So, what's even the point of having them?
+
+  Let's try to fix the last one.
+
+</details>
+
+<details>
+  <summary>Can we make integration tests a part of CI?</summary>
+
+  We already touched on the subject a few times, the first time when we decided to skip integration tests on CI. Now we learned the hard way that tests either run on CI, or there is no point of having them at all. So, we **have to** have all tests running on CI, and we definitely should have some integration tests.
+
+  But what if the server is hard to run on CI? Many big companies solve it by triggering from CI a deployment of the whole project (both the server and the healthcheck tool) in a special production-like environment. In this environment, you can run integration tests as well as just manually click buttons and see if your changes work. It should be done before each release, and preferrably also before merging each MR touching the code.
+
+</details>
+
+<details>
+  <summary>How many instances of the server we need on CI?</summary>
+
+  The answer is "one". If we start a new server for each state we want to test, it doesn't scale well.
+
+<details>
+  <summary>What integration tests are the most important ones?</summary>
+
+  If to pick "the best" integration test, it should be the one that tests the [happy path](https://en.wikipedia.org/wiki/Happy_path). Exceptions are (surprise!) exceptional. Most of the servers we check most of the time are "good" ones, so testing the integration with a "good" server ensures that the tool works most of the time.
+
+</details>
+
+<details>
+  <summary>Can we test multiple states with a single server?</summary>
+
+  Sure, why not. Quite often, you'll be able to run multiple integration tests on a single instance of the server. For example, if you need to test a registration form, you may register many different users with different fake emails, each time checking for a different behavior.
+
+  Our case is a bit different, though. A server is only in one state at the same time, either healthy or not. So, in the current implementation, we can test only one state of the server. But we can do more if we modify the server a bit. Let's make it accept a request parameter (`?state=healthy` or `?state=down`) that will indicated which state the server should pretend to be in.
+
+  The idea is similar to how you fire alarm works. Do you have a fire alarm? You should. If you do, go and look at it. It has a little red LED that blips time-to-time. It's a happy path. The fire alarm works and apparently doesn't scream that there is smoke (because, I hope, there is none). Now, put on ear plugs and hold the big button for 3 seconds. The fire alarm (if it's not broken) will make a sound like it does when it detects smoke. In other words, by pressing the button you ask the fire alarm to emulate the invalid state.
+
+  CO2 gas sensors go even further. When you press a button to test it, it will not just check if sound work, but actually trigger the sensor, as it gets triggered when there is gas. In other words, instead of pretending for the user that there is a problem, it actually emulates a problem. And you can do something similar with your tests. Instead of asking the server to pretend that it's in a bad state, ask it to actually get into invalid state. Or put it there. For instance, go and remove its database.
+
+</details>
+
+## Making fewer requests
+
+...
+
+<details>
+  <summary>Can we just mock everything?</summary>
+
+  ...
+
+</details>
+
+<details>
+  <summary>Is there a way to generate mocks?</summary>
+
+  ...
+
+</details>
+
+<details>
+  <summary>When you should use generated mocks? When you shouldn't?</summary>
+
+  ...
+
+</details>
+
+<details>
+  <summary>What about security? Wouldn't it cache my secrets?</summary>
+
+  ...
+
+</details>
